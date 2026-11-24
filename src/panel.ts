@@ -111,6 +111,8 @@ async function refreshTabs() {
         [...tab.options].some((opt) => opt.value === String(item.id)),
     );
     if (active) tab.value = String(active.id);
+    else if (tab.options.length > 0 && tab.options[0].value)
+      tab.value = tab.options[0].value;
   }
   if (tab.options.length === 0)
     tab.append(option("", "Open a supported page, then click GhostMask"));
@@ -441,55 +443,58 @@ route.addEventListener("change", () => {
 profile.addEventListener("change", () => {
   ocr.disabled = busy || profile.value === "strict";
 });
+function startTask() {
+  const id = Number(tab.value);
+  if (
+    !Number.isInteger(id) ||
+    !tab.value ||
+    !["simulator", "ollama", "lmstudio"].includes(route.value) ||
+    !["strict", "reviewed"].includes(profile.value) ||
+    !["fill-approved-fields", "summarize-page"].includes(purpose.value)
+  )
+    throw new SafeError("INVALID_INPUT");
+  if (route.value !== "simulator" && !model.value.trim()) {
+    status("Enter the name of the model loaded in your local server.", true);
+    throw new SafeError("INVALID_INPUT");
+  }
+  session?.abort();
+  browser?.dispose();
+  localValue.value = "";
+  privateTerms.value = "";
+  originalDetails.open = false;
+  reviewedId = "";
+  drag = undefined;
+  selectedTabId = id;
+  selectedPurpose = purpose.value as typeof selectedPurpose;
+  const allowed = Array.from(
+    document.querySelectorAll<HTMLInputElement>("#categories input:checked"),
+  ).map((input) => input.value as Category);
+  browser = new ChromeBrowser();
+  session = new Session(
+    browser,
+    id,
+    route.value as Route,
+    allowed,
+    undefined,
+    undefined,
+    {
+      profile: profile.value as "strict" | "reviewed",
+      ocr: profile.value === "reviewed" && ocr.checked,
+      purpose: selectedPurpose,
+      model: model.value.trim() || undefined,
+    },
+  );
+}
+
 button("start").addEventListener("click", () => {
   if (route.value !== "simulator" && !model.value.trim()) {
     status("Enter the name of the model loaded in your local server.", true);
     model.focus();
     return;
   }
-  void act(() => {
-    const id = Number(tab.value);
-    if (
-      !Number.isInteger(id) ||
-      !tab.value ||
-      !["simulator", "ollama", "lmstudio"].includes(route.value) ||
-      !["strict", "reviewed"].includes(profile.value) ||
-      !["fill-approved-fields", "summarize-page"].includes(purpose.value)
-    )
-      throw new SafeError("INVALID_INPUT");
-    if (route.value !== "simulator" && !model.value.trim()) {
-      status("Enter the name of the model loaded in your local server.", true);
-      throw new SafeError("INVALID_INPUT");
-    }
-    session?.abort();
-    browser?.dispose();
-    localValue.value = "";
-    privateTerms.value = "";
-    originalDetails.open = false;
-    reviewedId = "";
-    drag = undefined;
-    selectedTabId = id;
-    selectedPurpose = purpose.value as typeof selectedPurpose;
-    const allowed = Array.from(
-      document.querySelectorAll<HTMLInputElement>("#categories input:checked"),
-    ).map((input) => input.value as Category);
-    browser = new ChromeBrowser();
-    session = new Session(
-      browser,
-      id,
-      route.value as Route,
-      allowed,
-      undefined,
-      undefined,
-      {
-        profile: profile.value as "strict" | "reviewed",
-        ocr: profile.value === "reviewed" && ocr.checked,
-        purpose: selectedPurpose,
-        model: model.value.trim() || undefined,
-      },
-    );
-  }, "Task ready. Keep the selected tab active, then capture it.");
+  void act(startTask, "Task ready. Keep the selected tab active, then capture it.");
 });
+
 button("capture").addEventListener("click", () => {
   void act(async () => {
     if (!session) throw new SafeError("TASK_PAUSED");

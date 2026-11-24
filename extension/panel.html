@@ -7,323 +7,240 @@
     <link rel="stylesheet" href="panel.css" />
   </head>
   <body>
-    <header>
-      <div class="brand-mark" aria-hidden="true">G</div>
-      <div>
-        <h1>GhostMask</h1>
-        <p>Your page. Your disclosure.</p>
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">🛡️</div>
+        <div>
+          <h1>GhostMask</h1>
+          <p class="tagline">Local Browser Privacy Firewall</p>
+        </div>
       </div>
-      <span id="state" class="state">No task</span>
+      <span id="state" class="state-pill">No task</span>
     </header>
-    <nav aria-label="Workflow">
-      <a href="#setup">Capture</a><a href="#review-section">Review</a
-      ><a href="#actions">Actions &amp; receipts</a>
+
+    <nav aria-label="Workflow" class="workflow-nav">
+      <a href="#setup" class="nav-item active"><span class="nav-num">1</span> Boundary</a>
+      <a href="#review-section" class="nav-item"><span class="nav-num">2</span> Review &amp; Mask</a>
+      <a href="#actions" class="nav-item"><span class="nav-num">3</span> Fill &amp; Audit</a>
     </nav>
+
     <main>
       <div class="notice">
-        <strong>Review before sharing.</strong> English pages are supported.
-        Detection can miss private information. Use synthetic data for testing.
+        <strong>🔒 Private by design.</strong> Offline local redaction. Raw screenshots, personal data, and secrets never leave your device.
       </div>
-      <p id="status" role="status" aria-live="polite">
+
+      <div id="status" class="status-banner" role="status" aria-live="polite">
         Choose a tab and privacy mode to begin.
-      </p>
-      <section id="setup" aria-labelledby="setup-heading">
+      </div>
+
+      <!-- STEP 1: CAPTURE & BOUNDARY -->
+      <section id="setup" class="card-step" aria-labelledby="setup-heading">
         <div class="section-heading">
           <span class="step" aria-hidden="true">1</span>
-          <h2 id="setup-heading">Choose the boundary</h2>
+          <h2 id="setup-heading">Choose Webpage &amp; Mode</h2>
         </div>
-        <label for="tab">Selected tab</label>
-        <div class="inline">
-          <select id="tab"></select
-          ><button id="refresh-tabs" class="quiet">Refresh</button>
+
+        <div class="form-group">
+          <label for="tab">Target Webpage</label>
+          <div class="inline">
+            <select id="tab"></select>
+            <button id="refresh-tabs" class="quiet" title="Refresh open tabs">↻ Refresh</button>
+          </div>
         </div>
+
         <div class="two-up">
-          <div>
-            <label for="profile">Privacy mode</label
-            ><select id="profile">
+          <div class="form-group">
+            <label for="profile">Privacy Mode</label>
+            <select id="profile">
               <option value="reviewed">Selective masking + your review</option>
               <option value="strict">Strict — hide all source content</option>
             </select>
           </div>
-          <div>
-            <label for="purpose">Task</label
-            ><select id="purpose">
-              <option value="fill-approved-fields">
-                Fill fields I approve
-              </option>
-              <option value="summarize-page">
-                Summarize the reviewed page
-              </option>
+          <div class="form-group">
+            <label for="purpose">Task Goal</label>
+            <select id="purpose">
+              <option value="fill-approved-fields">Fill fields I approve</option>
+              <option value="summarize-page">Summarize the reviewed page</option>
             </select>
           </div>
         </div>
-        <label class="check"
-          ><input id="ocr" type="checkbox" checked /> Also check image text
-          locally</label
-        >
-        <p class="hint">
-          OCR reads text inside the screenshot on this Mac. It can miss text.
-          Unsupported regions stay hidden.
-        </p>
-        <label for="route">Model route</label
-        ><select id="route">
-          <option value="simulator">
-            Simulator — no model or network request
-          </option>
-          <option value="ollama">Local Ollama — qwen3:0.6b</option>
-          <option value="lmstudio">
-            Local LM Studio — local server required
-          </option></select
-        ><label for="model">Local model name</label
-        ><input
-          id="model"
-          value="qwen3:0.6b"
-          spellcheck="false"
-          autocomplete="off"
-        />
-        <p id="route-hint" class="hint">
-          The simulator checks the workflow without using a model.
-        </p>
-        <details class="settings">
-          <summary>Form insertion permissions</summary>
-          <fieldset id="categories">
-            <legend>What the local form may use</legend>
-            <label class="check"
-              ><input type="checkbox" value="contact" checked /> Contact
-              details</label
-            ><label class="check"
-              ><input type="checkbox" value="identity" /> Synthetic
-              identifiers</label
-            ><label class="check"
-              ><input type="checkbox" value="private" /> Synthetic private
-              fields</label
-            ><label class="check"
-              ><input type="checkbox" value="unknown" /> Unclassified
-              fields</label
-            >
-          </fieldset>
-          <p class="hint">
-            These allow local insertion, not disclosure to the model. Passwords
-            remain blocked.
-          </p>
-        </details>
-        <button id="start">Start new task</button>
-        <p class="hint">
-          Starting again clears the previous task and its local approvals.
-        </p>
-        <div class="capture-controls">
-          <p id="destination" class="hint">No destination selected.</p>
-          <details class="settings">
-            <summary>Exclude page regions</summary>
-            <label for="exclusions">CSS selectors, one per line</label
-            ><textarea
-              id="exclusions"
-              rows="2"
-              placeholder="#private-note&#10;.unrelated"
-              spellcheck="false"
-            ></textarea>
-            <p class="hint">
-              A selector names a part of the page. Excluded fields cannot
-              receive a local insertion.
-            </p>
-          </details>
-          <button id="capture" disabled>Capture selected tab</button>
-          <p id="capture-info" class="hint">No capture yet.</p>
+
+        <div class="primary-actions">
+          <button id="capture" class="btn-primary" disabled>📸 Capture &amp; Protect Page</button>
+          <button id="start" class="quiet" disabled>Start fresh task</button>
         </div>
+
+        <p id="destination" class="hint">No destination selected.</p>
+        <p id="capture-info" class="hint">No capture yet.</p>
+
+        <!-- Advanced Task & Boundary Configuration -->
+        <details class="settings">
+          <summary>⚙️ Advanced Model &amp; Region Settings</summary>
+          <div class="settings-content">
+            <label class="check">
+              <input id="ocr" type="checkbox" checked /> Check text inside screenshot with offline OCR
+            </label>
+            <p class="hint">Offline English recognition runs locally in the extension.</p>
+
+            <label for="route">Model Provider</label>
+            <select id="route">
+              <option value="simulator">Simulator — no model or network request</option>
+              <option value="ollama">Local Ollama — qwen3:0.6b</option>
+              <option value="lmstudio">Local LM Studio — local server required</option>
+            </select>
+
+            <label for="model">Local model name</label>
+            <input id="model" value="qwen3:0.6b" spellcheck="false" autocomplete="off" />
+            <p id="route-hint" class="hint">The simulator checks the workflow without using a model.</p>
+
+            <fieldset id="categories">
+              <legend>Allowed Field Categories</legend>
+              <label class="check"><input type="checkbox" value="contact" checked /> Contact details</label>
+              <label class="check"><input type="checkbox" value="identity" /> Synthetic identifiers</label>
+              <label class="check"><input type="checkbox" value="private" /> Synthetic private fields</label>
+              <label class="check"><input type="checkbox" value="unknown" /> Unclassified fields</label>
+            </fieldset>
+
+            <label for="exclusions">Exclude page regions (CSS selectors)</label>
+            <textarea id="exclusions" rows="2" placeholder="#private-note&#10;.unrelated" spellcheck="false"></textarea>
+            <p class="hint">Excluded elements cannot receive local insertions.</p>
+          </div>
+        </details>
       </section>
-      <section id="review-section" aria-labelledby="review-heading">
+
+      <!-- STEP 2: REVIEW & REDACTIONS -->
+      <section id="review-section" class="card-step" aria-labelledby="review-heading">
         <div class="section-heading">
           <span class="step" aria-hidden="true">2</span>
-          <h2 id="review-heading">Inspect and adjust</h2>
+          <h2 id="review-heading">Inspect &amp; Adjust Redactions</h2>
         </div>
+
         <div id="coverage-summary" class="coverage-summary">
           No page has been captured.
         </div>
         <ul id="unsupported" class="coverage"></ul>
+
         <div class="model-view">
           <div class="preview-heading">
-            <h3>Sanitized image</h3>
-            <span class="badge">Shareable after review</span>
+            <h3>Sanitized View for Assistant</h3>
+            <span class="badge">Safe for sharing</span>
           </div>
+
           <p id="sanitized-empty" class="empty">
-            Capture a page to review its actual masked image.
+            Capture a page above to preview the redacted visual image and text.
           </p>
+
           <div id="image-stage" class="image-stage" hidden>
-            <img
-              id="sanitized"
-              alt="Actual sanitized screenshot intended for export"
-              hidden
-            /><canvas
-              id="mask-canvas"
-              aria-label="Drag on the sanitized image to add a private region"
-            ></canvas>
+            <img id="sanitized" alt="Actual sanitized screenshot intended for export" hidden />
+            <canvas id="mask-canvas" aria-label="Drag on the sanitized image to add a private region"></canvas>
           </div>
+
           <p id="draw-hint" class="hint">
-            Drag a box on the image to hide an extra region. This changes the
-            exported pixels, not the original page.
+            💡 <strong>Quick Mask:</strong> Click and drag a box directly on the image above to cover any additional area.
           </p>
-          <p class="hint">
-            A new capture clears drawn regions. Protected phrases and CSS
-            exclusions remain in this task.
-          </p>
+
           <details class="settings">
-            <summary>Add a mask using the keyboard</summary>
+            <summary>Add mask with exact coordinates</summary>
             <div class="coordinates">
-              <label for="mask-x"
-                >Left<input
-                  id="mask-x"
-                  type="number"
-                  min="0"
-                  step="1"
-                  value="0" /></label
-              ><label for="mask-y"
-                >Top<input
-                  id="mask-y"
-                  type="number"
-                  min="0"
-                  step="1"
-                  value="0" /></label
-              ><label for="mask-width"
-                >Width<input
-                  id="mask-width"
-                  type="number"
-                  min="1"
-                  step="1"
-                  value="100" /></label
-              ><label for="mask-height"
-                >Height<input
-                  id="mask-height"
-                  type="number"
-                  min="1"
-                  step="1"
-                  value="40"
-              /></label>
+              <label for="mask-x">Left<input id="mask-x" type="number" min="0" step="1" value="0" /></label>
+              <label for="mask-y">Top<input id="mask-y" type="number" min="0" step="1" value="0" /></label>
+              <label for="mask-width">Width<input id="mask-width" type="number" min="1" step="1" value="100" /></label>
+              <label for="mask-height">Height<input id="mask-height" type="number" min="1" step="1" value="40" /></label>
             </div>
-            <p class="hint">
-              Coordinates use pixels in the captured page. The box must stay
-              inside the image.
-            </p>
             <button id="add-mask" class="quiet" disabled>Add region</button>
           </details>
+
           <ul id="manual-masks" class="mask-list"></ul>
-          <button id="clear-masks" class="quiet" disabled>
-            Clear drawn regions
-          </button>
+          <button id="clear-masks" class="quiet" disabled>Clear drawn regions</button>
         </div>
+
         <details class="local-settings">
           <summary>Protect extra phrases — kept local</summary>
-          <label for="private-terms"
-            >Names, phrases or values, one per line</label
-          ><textarea
-            id="private-terms"
-            rows="3"
-            spellcheck="false"
-            autocomplete="off"
-            placeholder="A private phrase to hide"
-          ></textarea
-          ><button id="apply-privacy" class="quiet" disabled>
-            Apply protected phrases
-          </button>
-          <p class="hint">
-            These phrases stay on this Mac. Changing privacy settings clears
-            previous review and insertion approvals.
-          </p>
+          <div class="settings-content">
+            <label for="private-terms">Keywords, names, or account IDs to auto-mask (one per line)</label>
+            <textarea id="private-terms" rows="2" spellcheck="false" autocomplete="off" placeholder="e.g. SecretProject&#10;InternalCode"></textarea>
+            <button id="apply-privacy" class="quiet" disabled>Apply protected phrases</button>
+            <p class="hint">These phrases are kept strictly on your device.</p>
+          </div>
         </details>
+
         <div class="text-view">
-          <h3>Sanitized page text</h3>
+          <h3>Redacted Text Extracted</h3>
           <pre id="sanitized-text">No page text yet.</pre>
         </div>
+
         <details class="settings">
           <summary>Model-visible field structure</summary>
           <pre id="structure">No field structure yet.</pre>
         </details>
+
         <details id="original-details" class="local-settings">
           <summary>Show original — stays on this Mac</summary>
           <div class="local-view">
-            <p>
-              <strong>Local-only content.</strong> It may contain private
-              information. This is not the model payload.
-            </p>
-            <img
-              id="original"
-              alt="Original local screenshot, not sent to the model"
-              hidden
-            />
+            <p><strong>Local-only reference.</strong> Stored only in volatile panel memory.</p>
+            <img id="original" alt="Original local screenshot, not sent to the model" hidden />
             <ul id="local-fields"></ul>
           </div>
         </details>
       </section>
-      <section id="actions" aria-labelledby="actions-heading">
+
+      <!-- STEP 3: FORM ACTIONS & VERIFICATION -->
+      <section id="actions" class="card-step" aria-labelledby="actions-heading">
         <div class="section-heading">
           <span class="step" aria-hidden="true">3</span>
-          <h2 id="actions-heading">Review, then use</h2>
+          <h2 id="actions-heading">Safe Form Assistance</h2>
         </div>
-        <div id="insertion-controls">
-          <h3>Approve one local insertion</h3>
-          <label for="target">Destination field</label
-          ><select id="target" disabled></select
-          ><label for="value">Synthetic value — kept local</label
-          ><input
-            id="value"
-            type="password"
-            autocomplete="off"
-            spellcheck="false"
-            placeholder="Type a synthetic test value"
-            disabled
-          />
-          <p class="hint">
-            The model gets a temporary token, not this value. The approval works
-            only for this field and page.
-          </p>
-          <button id="approve" disabled>Approve this field</button>
+
+        <div id="insertion-controls" class="action-card">
+          <h3>Approve Value for a Field</h3>
+          <div class="form-group">
+            <label for="target">Destination field</label>
+            <select id="target" disabled></select>
+          </div>
+          <div class="form-group">
+            <label for="value">Value to insert (kept in memory)</label>
+            <input id="value" type="password" autocomplete="off" spellcheck="false" placeholder="Type a synthetic test value" disabled />
+          </div>
+          <p class="hint">The AI model receives a single-use token reference, never this value.</p>
+          <button id="approve" class="btn-primary" disabled>Approve this field</button>
           <p id="grants" class="hint">No insertion approved.</p>
         </div>
+
         <div class="request-review">
-          <h3>Exact outgoing request</h3>
-          <p class="hint">
-            Check both previews and the request below. Nothing is sent or
-            exported until you review this version.
-          </p>
+          <h3>Review &amp; Execute</h3>
           <p id="payload-id" class="hint">No payload ready.</p>
-          <textarea
-            id="payload"
-            readonly
-            rows="6"
-            aria-label="Exact outbound payload"
-            spellcheck="false"
-          ></textarea
-          ><button id="review" disabled>I reviewed this payload</button>
-          <div class="export-row">
-            <button id="export-image" class="quiet" disabled>
-              Save masked PNG</button
-            ><button id="export-text" class="quiet" disabled>
-              Save masked text</button
-            ><button id="export-receipt" class="quiet" disabled>
-              Save receipt
-            </button>
+          <textarea id="payload" readonly rows="4" aria-label="Exact outbound payload" spellcheck="false"></textarea>
+
+          <div class="workflow-action-group">
+            <button id="review" class="quiet" disabled>I reviewed this payload</button>
+            <button id="propose" class="quiet" disabled>Ask for action proposal</button>
           </div>
-          <button id="propose" disabled>Ask for action proposal</button>
+
           <p id="proposal" class="proposal">No action proposed.</p>
-          <button id="execute" disabled>Insert and verify locally</button>
-          <p class="hint">
-            A model reply is a proposal, not proof that an action happened.
-            GhostMask checks insertions locally and never submits the form.
-          </p>
+          <button id="execute" class="btn-success" disabled>Insert and verify locally</button>
+          <p class="hint">GhostMask safely inserts verified tokens locally without submitting the form.</p>
+
+          <div class="export-row">
+            <button id="export-image" class="quiet" disabled>Save masked PNG</button>
+            <button id="export-text" class="quiet" disabled>Save masked text</button>
+            <button id="export-receipt" class="quiet" disabled>Save receipt</button>
+          </div>
         </div>
-        <h3 class="receipt-heading">Action receipts</h3>
-        <p class="hint">
-          Events and decisions only. No original values. Closing this panel
-          clears the task and local token mappings.
-        </p>
-        <ol id="receipts"></ol>
-        <button id="clear" class="quiet" disabled>Clear receipts</button>
+
+        <div class="receipts-card">
+          <h3 class="receipt-heading">📋 Action Audit Receipts</h3>
+          <ol id="receipts"></ol>
+          <button id="clear" class="quiet" disabled>Clear receipts</button>
+        </div>
       </section>
     </main>
-    <footer>
-      <button id="pause" class="quiet" disabled>Pause</button
-      ><button id="resume" class="quiet" disabled>Resume</button
-      ><button id="abort" class="danger" disabled>Abort and clear</button>
+
+    <footer class="app-footer">
+      <button id="pause" class="quiet" disabled>Pause</button>
+      <button id="resume" class="quiet" disabled>Resume</button>
+      <button id="abort" class="danger" disabled>Abort and clear</button>
     </footer>
+
     <script type="module" src="panel.js"></script>
   </body>
 </html>
