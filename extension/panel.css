@@ -518,6 +518,56 @@ pre {
   margin-bottom: 14px;
 }
 
+.batch-card {
+  border-left: 4px solid var(--primary);
+  background: #f0f7ff;
+}
+
+.batch-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.batch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  margin: 10px 0;
+}
+
+.batch-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #ffffff;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+}
+
+.batch-row-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #334155;
+  display: flex;
+  justify-content: space-between;
+}
+
+.batch-row-kind {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.batch-input {
+  font-size: 12px;
+  min-height: 32px;
+  padding: 6px 8px;
+}
+
 .request-review {
   margin-top: 14px;
 }

@@ -27,6 +27,11 @@ const exclusions = element<HTMLTextAreaElement>("exclusions");
 const privateTerms = element<HTMLTextAreaElement>("private-terms");
 const originalDetails = element<HTMLDetailsElement>("original-details");
 const canvas = element<HTMLCanvasElement>("mask-canvas");
+const batchSection = element<HTMLDivElement>("batch-autofill-section");
+const batchFields = element<HTMLDivElement>("batch-fields");
+const batchCount = element<HTMLSpanElement>("batch-count");
+const batchBtn = element<HTMLButtonElement>("batch-autofill-btn");
+let lastRenderedFieldKeys = "";
 let session: Session | undefined;
 let browser: ChromeBrowser | undefined;
 let busy = false;
@@ -269,12 +274,58 @@ function render() {
   );
   if ([...target.options].some((item) => item.value === previous))
     target.value = previous;
+  const hasFields = Boolean(view?.fields && view.fields.length > 0);
+  batchSection.hidden =
+    !hasCapture || !hasFields || selectedPurpose === "summarize-page";
+  batchCount.textContent = `${view?.fields?.length ?? 0} fields`;
+  batchBtn.disabled = busy || !ready || !hasFields;
+
+  const currentFieldKeys = (view?.fields ?? []).map((f) => f.key).join(",");
+  if (currentFieldKeys !== lastRenderedFieldKeys) {
+    lastRenderedFieldKeys = currentFieldKeys;
+    batchFields.replaceChildren();
+    view?.fields.forEach((field, i) => {
+      const row = document.createElement("div");
+      row.className = "batch-row";
+
+      const labelBar = document.createElement("div");
+      labelBar.className = "batch-row-label";
+
+      const title = document.createElement("span");
+      title.textContent = `field-${i + 1}: ${field.label || "Field"}`;
+
+      const kind = document.createElement("span");
+      kind.className = "batch-row-kind";
+      kind.textContent = `${field.kind} / ${field.category}`;
+
+      labelBar.append(title, kind);
+
+      const input = document.createElement("input");
+      input.className = "batch-input";
+      input.dataset.target = `field-${i + 1}`;
+      input.placeholder = `Enter test value for ${field.label || `field-${i + 1}`}`;
+      input.autocomplete = "off";
+      input.spellcheck = false;
+
+      if (/email/i.test(field.label) || field.kind === "email") {
+        input.value = "taylor@example.test";
+      } else if (/name/i.test(field.label)) {
+        input.value = "Taylor Example";
+      } else if (/message/i.test(field.label)) {
+        input.value = "Synthetic reimbursement note";
+      }
+
+      row.append(labelBar, input);
+      batchFields.append(row);
+    });
+  }
+
   target.disabled = busy || !ready || !target.options.length;
   localValue.disabled = target.disabled;
   button("approve").disabled = target.disabled;
   element("insertion-controls").hidden = selectedPurpose === "summarize-page";
   element("grants").textContent = view?.grants.length
-    ? `Approved for one local use: ${view.grants.map((g) => g.target).join(", ")}.`
+    ? `Approved for local use: ${view.grants.map((g) => g.target).join(", ")}.`
     : "No insertion approved.";
   element<HTMLTextAreaElement>("payload").value = view?.payload ?? "";
   element("payload-id").textContent = view?.payloadId
@@ -295,13 +346,18 @@ function render() {
   element("proposal").textContent =
     view?.proposal?.type === "insert"
       ? `Proposed: insert the approved local value into ${view.proposal.target}. Not executed yet.`
-      : view?.proposal?.type === "summary"
-        ? `Model summary — verify against the source\n\n${view.proposal.text}`
-        : view?.proposal?.type === "stop"
-          ? "The model proposed no insertion. No form action was taken."
-          : "No action proposed.";
+      : view?.proposal?.type === "batch_insert"
+        ? `Proposed: insert approved values into ${view.proposal.insertions.map((ins) => ins.target).join(", ")}. Not executed yet.`
+        : view?.proposal?.type === "summary"
+          ? `Model summary — verify against the source\n\n${view.proposal.text}`
+          : view?.proposal?.type === "stop"
+            ? "The model proposed no insertion. No form action was taken."
+            : "No action proposed.";
   button("execute").disabled =
-    busy || !ready || view?.proposal?.type !== "insert";
+    busy ||
+    !ready ||
+    (view?.proposal?.type !== "insert" &&
+      view?.proposal?.type !== "batch_insert");
   button("execute").hidden = selectedPurpose === "summarize-page";
   const receipts = element<HTMLOListElement>("receipts");
   receipts.replaceChildren();
@@ -517,6 +573,35 @@ button("approve").addEventListener("click", () => {
     await session.approve(target.value, value);
     reviewedId = "";
   }, "One local insertion approved. Review the new payload before requesting a proposal.");
+});
+batchBtn.addEventListener("click", () => {
+  void act(async () => {
+    if (!session) throw new SafeError("TASK_PAUSED");
+    const entries: { target: string; value: string }[] = [];
+    batchFields
+      .querySelectorAll<HTMLInputElement>(".batch-input")
+      .forEach((inp) => {
+        const val = inp.value.trim();
+        if (val) {
+          entries.push({ target: inp.dataset.target!, value: val });
+        }
+      });
+    if (entries.length === 0) {
+      status("Enter at least one value to autofill.", true);
+      return;
+    }
+    // 1. Batch approve all detected fields
+    await session.approveBatch(entries);
+    // 2. Mark reviewed
+    const id = session.view().payloadId;
+    if (!id) throw new SafeError("INVALID_ARTIFACT");
+    session.review(id);
+    reviewedId = id;
+    // 3. Propose actions
+    await session.propose();
+    // 4. Safely execute insertions locally
+    await session.execute();
+  }, "Autofill verified locally. All approved fields populated without submitting form.");
 });
 button("review").addEventListener("click", () => {
   void act(() => {

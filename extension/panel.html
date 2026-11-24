@@ -191,6 +191,19 @@
           <h2 id="actions-heading">Safe Form Assistance</h2>
         </div>
 
+        <!-- SIMPLIFY-STYLE MULTI-FIELD AUTOFILL -->
+        <div id="batch-autofill-section" class="action-card batch-card" hidden>
+          <div class="batch-header">
+            <h3>⚡ Autofill Detected Form Fields</h3>
+            <span id="batch-count" class="badge">0 fields</span>
+          </div>
+          <p class="hint">Approved values are inserted securely via scoped memory tokens:</p>
+          <div id="batch-fields" class="batch-list"></div>
+          <button id="batch-autofill-btn" class="btn-primary" style="margin-top: 8px;" disabled>
+            ⚡ Autofill Selected Fields
+          </button>
+        </div>
+
         <div id="insertion-controls" class="action-card">
           <h3>Approve Value for a Field</h3>
           <div class="form-group">

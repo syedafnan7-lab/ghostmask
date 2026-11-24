@@ -270,3 +270,62 @@ test("a page change during model inference rejects the stale proposal itself", a
   await assert.rejects(s.propose(), /STALE_CAPTURE/);
   assert.equal(s.view().proposal, undefined);
 });
+
+test("multi-field batch approval and insertion fills multiple fields atomically", async () => {
+  let state = structuredClone(identity);
+  const inserted: Record<string, string> = {};
+  const multiBrowser: BrowserPort = {
+    current: async () => structuredClone(state),
+    capture: async () => ({
+      identity: structuredClone(state),
+      capturedAt: Date.now(),
+      image: "data:image/png;base64,RAWSECRET",
+      text: "test form",
+      fields: [
+        {
+          key: "name-key",
+          kind: "text",
+          category: "contact",
+          value: "",
+          label: "Full Name",
+          rect: { x: 0, y: 0, width: 100, height: 20 },
+        },
+        {
+          key: "email-key",
+          kind: "email",
+          category: "contact",
+          value: "",
+          label: "Email Address",
+          rect: { x: 0, y: 30, width: 100, height: 20 },
+        },
+      ],
+      masks: [],
+      unsupported: [],
+    }),
+    insert: async (_i, key, value) => {
+      inserted[key] = value;
+      state.generation++;
+      return true;
+    },
+  };
+  const s = new Session(multiBrowser, 1, "simulator", ["contact"], raster);
+  await s.capture();
+  await s.approveBatch([
+    { target: "field-1", value: "Taylor Example" },
+    { target: "field-2", value: "taylor@example.test" },
+  ]);
+  assert.equal(s.view().grants.length, 2);
+  s.review(s.view().payloadId);
+  const proposal = await s.propose();
+  assert.equal(proposal.type, "batch_insert");
+  if (proposal.type === "batch_insert") {
+    assert.equal(proposal.insertions.length, 2);
+    assert.equal(proposal.insertions[0].target, "field-1");
+    assert.equal(proposal.insertions[1].target, "field-2");
+  }
+  await s.execute();
+  assert.equal(inserted["name-key"], "Taylor Example");
+  assert.equal(inserted["email-key"], "taylor@example.test");
+  assert.equal(s.view().grants.length, 0);
+});
+
