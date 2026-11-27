@@ -445,3 +445,15 @@ test("a programmatic hidden-value change invalidates capture identity", async ()
     },
   );
 });
+
+test("missing activeTab or <all_urls> permission surfaces PERMISSION_REQUIRED cleanly", async () => {
+  const fixture = apiFixture();
+  const api = fixture.api as any;
+  api.tabs.captureVisibleTab = async () => {
+    throw new Error(
+      "Either the '<all_urls>' or 'activeTab' permission is required.",
+    );
+  };
+  const browser = new ChromeBrowser(api);
+  await assert.rejects(browser.capture(7, []), /PERMISSION_REQUIRED/);
+});

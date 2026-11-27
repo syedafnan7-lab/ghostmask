@@ -766,10 +766,18 @@ export class ChromeBrowser implements BrowserPort {
         const before = await this.observe(tabId, exclusions);
         await this.selected(tabId);
         this.lastCapture = Date.now();
-        const image = await this.api.tabs.captureVisibleTab(
-          before.identity.windowId,
-          { format: "png" },
-        );
+        let image: string;
+        try {
+          image = await this.api.tabs.captureVisibleTab(
+            before.identity.windowId,
+            { format: "png" },
+          );
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (/activeTab|<all_urls>|permission/i.test(msg))
+            throw new SafeError("PERMISSION_REQUIRED");
+          throw new SafeError("CAPTURE_FAILED");
+        }
         const after = await this.observe(tabId, exclusions);
         if (
           epoch !== this.activationEpoch ||
@@ -797,7 +805,15 @@ export class ChromeBrowser implements BrowserPort {
       }
       throw new SafeError("STALE_CAPTURE");
     } catch (e) {
-      throw e instanceof SafeError ? e : new SafeError("CAPTURE_FAILED");
+      if (e instanceof SafeError) throw e;
+      const msg = e instanceof Error ? e.message : "";
+      if (
+        msg === "STALE_CAPTURE" ||
+        msg === "UNSUPPORTED" ||
+        msg === "INVALID_INPUT"
+      )
+        throw new SafeError(msg);
+      throw new SafeError("CAPTURE_FAILED");
     } finally {
       this.captureBusy = false;
     }

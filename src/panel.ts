@@ -60,6 +60,8 @@ const explanations: Partial<Record<SafeErrorCode, string>> = {
     "The page changed. This capture cannot be sent or exported. Resume and capture again.",
   POLICY_DENIED:
     "This action is not allowed by the current permissions or task state.",
+  PERMISSION_REQUIRED:
+    "Chrome blocked screenshot capture because tab permission isn't active yet. Click Grant site access below (or click the GhostMask toolbar icon on the page), then Resume and Capture.",
   INVALID_ARTIFACT:
     "This version cannot be used. Capture and review a fresh payload.",
   TOKEN_DENIED:
@@ -618,6 +620,9 @@ async function act(work: () => Promise<void> | void, success: string) {
       status("Paused. Capture again before continuing.");
     else status(success);
   } catch (error) {
+    if (error instanceof SafeError && error.code === "PERMISSION_REQUIRED") {
+      element("access-prompt").hidden = false;
+    }
     status(
       error instanceof SafeError
         ? (explanations[error.code] ??
@@ -744,11 +749,12 @@ button("grant-access").addEventListener("click", () => {
   void act(async () => {
     if (!chrome.permissions?.request) throw new SafeError("UNSUPPORTED");
     const granted = await chrome.permissions.request({
-      origins: ["http://*/*", "https://*/*"],
+      origins: ["<all_urls>"],
     });
     if (!granted) throw new SafeError("POLICY_DENIED");
+    if (session?.view().state === "paused") session.resume();
     await refreshTabs();
-  }, "Site access granted. Select your webpage above and click Start fresh task.");
+  }, "Site access granted. Click Capture & Protect Page to continue.");
 });
 
 for (const control of [tab, profile, purpose, route, ocr]) {
