@@ -3,30 +3,42 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>GhostMask — Review before sharing</title>
+    <title>GhostMask — Local Privacy Firewall</title>
     <link rel="stylesheet" href="panel.css" />
   </head>
   <body>
     <header class="app-header">
       <div class="brand">
-        <div class="brand-mark" aria-hidden="true">🛡️</div>
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3l7 3v5c0 4.8-3 8.9-7 10-4-1.1-7-5.2-7-10V6l7-3z" />
+            <rect x="8.5" y="10.25" width="7" height="3.5" rx="1.2" fill="currentColor" stroke="none" />
+          </svg>
+        </div>
         <div>
           <h1>GhostMask</h1>
-          <p class="tagline">Local Browser Privacy Firewall</p>
+          <p class="tagline">Local Privacy Firewall</p>
         </div>
       </div>
-      <span id="state" class="state-pill">No task</span>
+      <div class="state-wrap">
+        <span id="state-dot" class="state-dot" data-state="idle" aria-hidden="true"></span>
+        <span id="state" class="state-pill" data-state="idle">No task</span>
+      </div>
     </header>
 
     <nav aria-label="Workflow" class="workflow-nav">
-      <a href="#setup" class="nav-item active"><span class="nav-num">1</span> Boundary</a>
-      <a href="#review-section" class="nav-item"><span class="nav-num">2</span> Review &amp; Mask</a>
-      <a href="#actions" class="nav-item"><span class="nav-num">3</span> Fill &amp; Audit</a>
+      <a id="nav-step-1" href="#setup" class="nav-item active"><span class="nav-num">1</span><span>Boundary</span></a>
+      <a id="nav-step-2" href="#review-section" class="nav-item"><span class="nav-num">2</span><span>Review &amp; Mask</span></a>
+      <a id="nav-step-3" href="#actions" class="nav-item"><span class="nav-num">3</span><span>Fill &amp; Audit</span></a>
     </nav>
 
     <main>
       <div class="notice">
-        <strong>🔒 Private by design.</strong> Offline local redaction. Raw screenshots, personal data, and secrets never leave your device.
+        <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="5" y="11" width="14" height="10" rx="2" />
+          <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+        </svg>
+        <span><strong>Private by design.</strong> Offline redaction on your device. Raw screenshots and secrets stay local.</span>
       </div>
 
       <div id="status" class="status-banner" role="status" aria-live="polite">
@@ -37,14 +49,23 @@
       <section id="setup" class="card-step" aria-labelledby="setup-heading">
         <div class="section-heading">
           <span class="step" aria-hidden="true">1</span>
-          <h2 id="setup-heading">Choose Webpage &amp; Mode</h2>
+          <div class="section-title-wrap">
+            <h2 id="setup-heading">Choose Webpage &amp; Mode</h2>
+            <p class="section-sub">Bind one tab and pick how much context leaves this panel.</p>
+          </div>
         </div>
 
         <div class="form-group">
           <label for="tab">Target Webpage</label>
           <div class="inline">
             <select id="tab"></select>
-            <button id="refresh-tabs" class="quiet" title="Refresh open tabs">↻ Refresh</button>
+            <button id="refresh-tabs" class="quiet icon-btn" type="button" title="Refresh open tabs" aria-label="Refresh open tabs">
+              <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+                <polyline points="21 3 21 9 15 9" />
+              </svg>
+              <span>Refresh</span>
+            </button>
           </div>
         </div>
 
@@ -52,53 +73,87 @@
           <div class="form-group">
             <label for="profile">Privacy Mode</label>
             <select id="profile">
-              <option value="reviewed">Selective masking + your review</option>
-              <option value="strict">Strict — hide all source content</option>
+              <option value="reviewed">Selective masking + review</option>
+              <option value="strict">Strict — hide all content</option>
             </select>
           </div>
           <div class="form-group">
             <label for="purpose">Task Goal</label>
             <select id="purpose">
               <option value="fill-approved-fields">Fill fields I approve</option>
-              <option value="summarize-page">Summarize the reviewed page</option>
+              <option value="summarize-page">Summarize reviewed page</option>
             </select>
           </div>
         </div>
 
-        <div class="primary-actions">
-          <button id="capture" class="btn-primary" disabled>📸 Capture &amp; Protect Page</button>
-          <button id="start" class="quiet" disabled>Start fresh task</button>
+        <div id="config-dirty" class="dirty-pill" hidden>
+          Settings updated — click <strong>Start fresh task</strong> to apply them.
         </div>
 
-        <p id="destination" class="hint">No destination selected.</p>
-        <p id="capture-info" class="hint">No capture yet.</p>
+        <div class="primary-actions">
+          <button id="capture" class="btn-primary" type="button" disabled>
+            <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 7V5a2 2 0 0 1 2-2h2" />
+              <path d="M16 3h2a2 2 0 0 1 2 2v2" />
+              <path d="M20 17v2a2 2 0 0 1-2 2h-2" />
+              <path d="M8 21H6a2 2 0 0 1-2-2v-2" />
+              <rect x="7" y="8" width="10" height="8" rx="1.5" />
+            </svg>
+            <span>Capture &amp; Protect Page</span>
+          </button>
+          <button id="start" class="quiet" type="button" disabled>Start fresh task</button>
+        </div>
 
-        <!-- Advanced Task & Boundary Configuration -->
+        <div class="meta-strip">
+          <p id="destination" class="hint">No destination selected.</p>
+          <p id="capture-info" class="hint">No capture yet.</p>
+        </div>
+
         <details class="settings">
-          <summary>⚙️ Advanced Model &amp; Region Settings</summary>
+          <summary>
+            <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="4" y1="6" x2="20" y2="6" />
+              <line x1="4" y1="12" x2="20" y2="12" />
+              <line x1="4" y1="18" x2="20" y2="18" />
+              <circle cx="9" cy="6" r="2" fill="currentColor" />
+              <circle cx="15" cy="12" r="2" fill="currentColor" />
+              <circle cx="10" cy="18" r="2" fill="currentColor" />
+            </svg>
+            <span>Advanced Model &amp; Region Settings</span>
+          </summary>
           <div class="settings-content">
             <label class="check">
-              <input id="ocr" type="checkbox" checked /> Check text inside screenshot with offline OCR
+              <input id="ocr" type="checkbox" checked />
+              <span>Check text inside screenshot with offline OCR</span>
             </label>
             <p class="hint">Offline English recognition runs locally in the extension.</p>
 
-            <label for="route">Model Provider</label>
-            <select id="route">
-              <option value="simulator">Simulator — no model or network request</option>
-              <option value="ollama">Local Ollama — qwen3:0.6b</option>
-              <option value="lmstudio">Local LM Studio — local server required</option>
-            </select>
+            <div class="form-group">
+              <label for="route">Model Provider</label>
+              <select id="route">
+                <option value="simulator">Simulator — no model or network request</option>
+                <option value="ollama">Local Ollama — 127.0.0.1:11434</option>
+                <option value="lmstudio">Local LM Studio — 127.0.0.1:1234</option>
+              </select>
+            </div>
 
-            <label for="model">Local model name</label>
-            <input id="model" value="qwen3:0.6b" spellcheck="false" autocomplete="off" />
-            <p id="route-hint" class="hint">The simulator checks the workflow without using a model.</p>
+            <div class="form-group">
+              <label for="model">Local model name</label>
+              <div class="inline">
+                <input id="model" list="model-suggestions" value="qwen3:0.6b" spellcheck="false" autocomplete="off" />
+                <button id="check-route" class="quiet" type="button" disabled>Test server</button>
+              </div>
+              <datalist id="model-suggestions"></datalist>
+              <p id="route-hint" class="hint">The simulator checks the workflow without using a model.</p>
+              <p id="route-check-status" class="hint route-status" hidden></p>
+            </div>
 
             <fieldset id="categories">
               <legend>Allowed Field Categories</legend>
-              <label class="check"><input type="checkbox" value="contact" checked /> Contact details</label>
-              <label class="check"><input type="checkbox" value="identity" /> Synthetic identifiers</label>
-              <label class="check"><input type="checkbox" value="private" /> Synthetic private fields</label>
-              <label class="check"><input type="checkbox" value="unknown" /> Unclassified fields</label>
+              <label class="check"><input type="checkbox" value="contact" checked /> <span>Contact details</span></label>
+              <label class="check"><input type="checkbox" value="identity" /> <span>Synthetic identifiers</span></label>
+              <label class="check"><input type="checkbox" value="private" /> <span>Synthetic private fields</span></label>
+              <label class="check"><input type="checkbox" value="unknown" /> <span>Unclassified fields</span></label>
             </fieldset>
 
             <label for="exclusions">Exclude page regions (CSS selectors)</label>
@@ -112,12 +167,31 @@
       <section id="review-section" class="card-step" aria-labelledby="review-heading">
         <div class="section-heading">
           <span class="step" aria-hidden="true">2</span>
-          <h2 id="review-heading">Inspect &amp; Adjust Redactions</h2>
+          <div class="section-title-wrap">
+            <h2 id="review-heading">Inspect &amp; Adjust Redactions</h2>
+            <p class="section-sub">Verify the masked screenshot and text before anything reaches an assistant.</p>
+          </div>
         </div>
 
         <div id="coverage-summary" class="coverage-summary">
           No page has been captured.
         </div>
+
+        <div id="mask-stats" class="chip-grid" hidden>
+          <div class="stat-chip">
+            <span class="stat-label">Auto masks</span>
+            <strong id="stat-auto" class="stat-value">0</strong>
+          </div>
+          <div class="stat-chip">
+            <span class="stat-label">Manual</span>
+            <strong id="stat-manual" class="stat-value">0</strong>
+          </div>
+          <div class="stat-chip">
+            <span class="stat-label">Retained chars</span>
+            <strong id="stat-chars" class="stat-value">0</strong>
+          </div>
+        </div>
+
         <ul id="unsupported" class="coverage"></ul>
 
         <div class="model-view">
@@ -135,31 +209,37 @@
             <canvas id="mask-canvas" aria-label="Drag on the sanitized image to add a private region"></canvas>
           </div>
 
-          <p id="draw-hint" class="hint">
-            💡 <strong>Quick Mask:</strong> Click and drag a box directly on the image above to cover any additional area.
+          <p id="draw-hint" class="hint inline-hint">
+            <svg class="icon icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+            </svg>
+            <span><strong>Quick Mask:</strong> Click and drag a box directly on the image to mask extra areas. Press <kbd>Esc</kbd> to cancel.</span>
           </p>
 
           <details class="settings">
             <summary>Add mask with exact coordinates</summary>
-            <div class="coordinates">
-              <label for="mask-x">Left<input id="mask-x" type="number" min="0" step="1" value="0" /></label>
-              <label for="mask-y">Top<input id="mask-y" type="number" min="0" step="1" value="0" /></label>
-              <label for="mask-width">Width<input id="mask-width" type="number" min="1" step="1" value="100" /></label>
-              <label for="mask-height">Height<input id="mask-height" type="number" min="1" step="1" value="40" /></label>
+            <div class="settings-content">
+              <div class="coordinates">
+                <label for="mask-x">Left<input id="mask-x" type="number" min="0" step="1" value="0" /></label>
+                <label for="mask-y">Top<input id="mask-y" type="number" min="0" step="1" value="0" /></label>
+                <label for="mask-width">Width<input id="mask-width" type="number" min="1" step="1" value="100" /></label>
+                <label for="mask-height">Height<input id="mask-height" type="number" min="1" step="1" value="40" /></label>
+              </div>
+              <button id="add-mask" class="quiet" type="button" disabled>Add region</button>
             </div>
-            <button id="add-mask" class="quiet" disabled>Add region</button>
           </details>
 
           <ul id="manual-masks" class="mask-list"></ul>
-          <button id="clear-masks" class="quiet" disabled>Clear drawn regions</button>
+          <button id="clear-masks" class="quiet" type="button" disabled>Clear drawn regions</button>
         </div>
 
         <details class="local-settings">
-          <summary>Protect extra phrases — kept local</summary>
+          <summary><span>Protect extra phrases — kept local</span></summary>
           <div class="settings-content">
             <label for="private-terms">Keywords, names, or account IDs to auto-mask (one per line)</label>
             <textarea id="private-terms" rows="2" spellcheck="false" autocomplete="off" placeholder="e.g. SecretProject&#10;InternalCode"></textarea>
-            <button id="apply-privacy" class="quiet" disabled>Apply protected phrases</button>
+            <button id="apply-privacy" class="quiet" type="button" disabled>Apply protected phrases</button>
             <p class="hint">These phrases are kept strictly on your device.</p>
           </div>
         </details>
@@ -171,13 +251,15 @@
 
         <details class="settings">
           <summary>Model-visible field structure</summary>
-          <pre id="structure">No field structure yet.</pre>
+          <div class="settings-content">
+            <pre id="structure">No field structure yet.</pre>
+          </div>
         </details>
 
         <details id="original-details" class="local-settings">
-          <summary>Show original — stays on this Mac</summary>
+          <summary>Show original — stays on this device</summary>
           <div class="local-view">
-            <p><strong>Local-only reference.</strong> Stored only in volatile panel memory.</p>
+            <p class="hint"><strong>Local-only reference.</strong> Stored only in volatile panel memory.</p>
             <img id="original" alt="Original local screenshot, not sent to the model" hidden />
             <ul id="local-fields"></ul>
           </div>
@@ -188,70 +270,111 @@
       <section id="actions" class="card-step" aria-labelledby="actions-heading">
         <div class="section-heading">
           <span class="step" aria-hidden="true">3</span>
-          <h2 id="actions-heading">Safe Form Assistance</h2>
+          <div class="section-title-wrap">
+            <h2 id="actions-heading">Safe Form Assistance</h2>
+            <p class="section-sub">Approve field values locally, review the exact payload, then insert safely.</p>
+          </div>
         </div>
 
         <!-- SIMPLIFY-STYLE MULTI-FIELD AUTOFILL -->
         <div id="batch-autofill-section" class="action-card batch-card" hidden>
           <div class="batch-header">
-            <h3>⚡ Autofill Detected Form Fields</h3>
-            <span id="batch-count" class="badge">0 fields</span>
+            <div class="batch-title">
+              <svg class="icon icon-sm icon-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+              </svg>
+              <h3>Autofill Detected Form Fields</h3>
+            </div>
+            <span id="batch-count" class="badge badge-accent">0 fields</span>
           </div>
-          <p class="hint">Approved values are inserted securely via scoped memory tokens:</p>
+          <div class="batch-toolbar">
+            <p class="hint">Select fields to populate locally via single-use memory tokens.</p>
+            <div class="batch-quick-actions">
+              <button id="batch-fill-sample" class="text-btn" type="button">Fill sample</button>
+              <button id="batch-clear" class="text-btn" type="button">Clear</button>
+            </div>
+          </div>
           <div id="batch-fields" class="batch-list"></div>
-          <button id="batch-autofill-btn" class="btn-primary" style="margin-top: 8px;" disabled>
-            ⚡ Autofill Selected Fields
+          <button id="batch-autofill-btn" class="btn-primary full-width" type="button" disabled>
+            <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            </svg>
+            <span>Autofill Selected Fields</span>
           </button>
         </div>
 
         <div id="insertion-controls" class="action-card">
-          <h3>Approve Value for a Field</h3>
+          <h3>Approve Value for One Field</h3>
           <div class="form-group">
             <label for="target">Destination field</label>
             <select id="target" disabled></select>
           </div>
           <div class="form-group">
             <label for="value">Value to insert (kept in memory)</label>
-            <input id="value" type="password" autocomplete="off" spellcheck="false" placeholder="Type a synthetic test value" disabled />
+            <div class="input-with-action">
+              <input id="value" type="password" autocomplete="off" spellcheck="false" placeholder="Type a synthetic test value" disabled />
+              <button id="toggle-value-visibility" class="quiet icon-only" type="button" title="Show or hide value" aria-label="Show value" disabled>
+                <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </button>
+            </div>
           </div>
-          <p class="hint">The AI model receives a single-use token reference, never this value.</p>
-          <button id="approve" class="btn-primary" disabled>Approve this field</button>
+          <p class="hint">The model receives an ephemeral UUID token reference, never your typed value.</p>
+          <button id="approve" class="btn-primary" type="button" disabled>Approve this field</button>
           <p id="grants" class="hint">No insertion approved.</p>
         </div>
 
         <div class="request-review">
-          <h3>Review &amp; Execute</h3>
+          <div class="preview-heading">
+            <h3>Review &amp; Execute</h3>
+            <button id="copy-payload" class="text-btn" type="button" disabled>Copy JSON</button>
+          </div>
           <p id="payload-id" class="hint">No payload ready.</p>
+          <div id="payload-summary" class="chip-grid compact" hidden>
+            <div class="stat-chip"><span class="stat-label">Fields</span><strong id="pay-fields" class="stat-value">0</strong></div>
+            <div class="stat-chip"><span class="stat-label">Tokens</span><strong id="pay-grants" class="stat-value">0</strong></div>
+            <div class="stat-chip"><span class="stat-label">Shared chars</span><strong id="pay-chars" class="stat-value">0</strong></div>
+          </div>
           <textarea id="payload" readonly rows="4" aria-label="Exact outbound payload" spellcheck="false"></textarea>
 
           <div class="workflow-action-group">
-            <button id="review" class="quiet" disabled>I reviewed this payload</button>
-            <button id="propose" class="quiet" disabled>Ask for action proposal</button>
+            <button id="review" class="quiet" type="button" disabled>I reviewed this payload</button>
+            <button id="propose" class="quiet" type="button" disabled>Ask for action proposal</button>
           </div>
 
           <p id="proposal" class="proposal">No action proposed.</p>
-          <button id="execute" class="btn-success" disabled>Insert and verify locally</button>
-          <p class="hint">GhostMask safely inserts verified tokens locally without submitting the form.</p>
+          <button id="execute" class="btn-success full-width" type="button" disabled>
+            <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <span>Insert and verify locally</span>
+          </button>
+          <p class="hint">GhostMask inserts verified tokens locally without clicking Submit.</p>
 
           <div class="export-row">
-            <button id="export-image" class="quiet" disabled>Save masked PNG</button>
-            <button id="export-text" class="quiet" disabled>Save masked text</button>
-            <button id="export-receipt" class="quiet" disabled>Save receipt</button>
+            <button id="export-image" class="quiet" type="button" disabled>Save masked PNG</button>
+            <button id="export-text" class="quiet" type="button" disabled>Save masked text</button>
+            <button id="export-receipt" class="quiet" type="button" disabled>Save receipt</button>
           </div>
         </div>
 
         <div class="receipts-card">
-          <h3 class="receipt-heading">📋 Action Audit Receipts</h3>
+          <div class="preview-heading">
+            <h3 class="receipt-heading">Action Audit Receipts</h3>
+            <span id="receipt-count" class="badge">0 events</span>
+          </div>
           <ol id="receipts"></ol>
-          <button id="clear" class="quiet" disabled>Clear receipts</button>
+          <button id="clear" class="quiet" type="button" disabled>Clear receipts</button>
         </div>
       </section>
     </main>
 
     <footer class="app-footer">
-      <button id="pause" class="quiet" disabled>Pause</button>
-      <button id="resume" class="quiet" disabled>Resume</button>
-      <button id="abort" class="danger" disabled>Abort and clear</button>
+      <button id="pause" class="quiet" type="button" disabled>Pause</button>
+      <button id="resume" class="quiet" type="button" disabled>Resume</button>
+      <button id="abort" class="danger" type="button" disabled>Abort and clear</button>
     </footer>
 
     <script type="module" src="panel.js"></script>

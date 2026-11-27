@@ -329,3 +329,80 @@ test("multi-field batch approval and insertion fills multiple fields atomically"
   assert.equal(s.view().grants.length, 0);
 });
 
+test("approveBatch rejects empty values or duplicate targets atomically without mutating grants", async () => {
+  const f = fixture();
+  const s = new Session(f.browser, 1, "simulator", ["contact"], raster);
+  await s.capture();
+  await assert.rejects(
+    s.approveBatch([
+      { target: "field-1", value: "valid@example.test" },
+      { target: "field-1", value: "dup@example.test" },
+    ]),
+    /INVALID_INPUT/,
+  );
+  assert.equal(s.view().grants.length, 0);
+  await assert.rejects(
+    s.approveBatch([{ target: "field-1", value: "" }]),
+    /TOKEN_DENIED/,
+  );
+  assert.equal(s.view().grants.length, 0);
+});
+
+test("Session.execute uses atomic insertBatch when browser supports it", async () => {
+  let state = structuredClone(identity);
+  let batchCalls = 0;
+  let lastBatch: { fieldKey: string; value: string }[] = [];
+  const batchBrowser: BrowserPort = {
+    current: async () => structuredClone(state),
+    capture: async () => ({
+      identity: structuredClone(state),
+      capturedAt: Date.now(),
+      image: "data:image/png;base64,RAWSECRET",
+      text: "test form",
+      fields: [
+        {
+          key: "name-key",
+          kind: "text",
+          category: "contact",
+          value: "",
+          label: "Full Name",
+          rect: { x: 0, y: 0, width: 100, height: 20 },
+        },
+        {
+          key: "email-key",
+          kind: "email",
+          category: "contact",
+          value: "",
+          label: "Email Address",
+          rect: { x: 0, y: 30, width: 100, height: 20 },
+        },
+      ],
+      masks: [],
+      unsupported: [],
+    }),
+    insert: async () => {
+      throw new Error("Should prefer insertBatch");
+    },
+    insertBatch: async (_i, insertions) => {
+      batchCalls++;
+      lastBatch = insertions;
+      state.generation++;
+      return true;
+    },
+  };
+  const s = new Session(batchBrowser, 1, "simulator", ["contact"], raster);
+  await s.capture();
+  await s.approveBatch([
+    { target: "field-1", value: "Alex Synthetic" },
+    { target: "field-2", value: "alex@example.test" },
+  ]);
+  s.review(s.view().payloadId);
+  await s.propose();
+  await s.execute();
+  assert.equal(batchCalls, 1);
+  assert.deepEqual(lastBatch, [
+    { fieldKey: "name-key", value: "Alex Synthetic" },
+    { fieldKey: "email-key", value: "alex@example.test" },
+  ]);
+});
+

@@ -40,7 +40,7 @@ async function pageSnapshot(
     urlKey: string;
     viewport: Identity["viewport"];
   },
-  insertion?: { key: string; value: string },
+  insertion?: { key: string; value: string } | { key: string; value: string }[],
 ): Promise<PageSnapshot | boolean> {
   const host = globalThis as typeof globalThis & {
     __ghostmaskCaptureV1?: PageState;
@@ -141,98 +141,112 @@ async function pageSnapshot(
   )
     return false;
   if (insertion) {
-    const el = state.elements.get(insertion.key);
-    if (
-      !el?.isConnected ||
-      isExcluded(el) ||
-      el.ownerDocument !== document ||
-      document.visibilityState !== "visible"
-    )
-      return false;
-    if (
-      !(
-        el instanceof HTMLInputElement ||
-        el instanceof HTMLTextAreaElement ||
-        el instanceof HTMLSelectElement
+    const list = Array.isArray(insertion) ? insertion : [insertion];
+    if (!list.length) return false;
+    const validateAndPrepare = (item: { key: string; value: string }) => {
+      const el = state.elements.get(item.key);
+      if (
+        !el?.isConnected ||
+        isExcluded(el) ||
+        el.ownerDocument !== document ||
+        document.visibilityState !== "visible"
       )
-    )
-      return false;
-    if (
-      el.disabled ||
-      (!(el instanceof HTMLSelectElement) && el.readOnly) ||
-      el.closest("[inert]") ||
-      el.getAttribute("aria-disabled") === "true"
-    )
-      return false;
-    if (
-      el instanceof HTMLInputElement &&
-      !["text", "email", "tel", "search", "url"].includes(el.type)
-    )
-      return false;
-    if (el instanceof HTMLSelectElement) {
-      const options = Array.from(el.options).filter(
-        (option) => option.value === insertion.value,
+        return null;
+      if (
+        !(
+          el instanceof HTMLInputElement ||
+          el instanceof HTMLTextAreaElement ||
+          el instanceof HTMLSelectElement
+        )
+      )
+        return null;
+      if (
+        el.disabled ||
+        (!(el instanceof HTMLSelectElement) && el.readOnly) ||
+        el.closest("[inert]") ||
+        el.getAttribute("aria-disabled") === "true"
+      )
+        return null;
+      if (
+        el instanceof HTMLInputElement &&
+        !["text", "email", "tel", "search", "url"].includes(el.type)
+      )
+        return null;
+      if (el instanceof HTMLSelectElement) {
+        const options = Array.from(el.options).filter(
+          (option) => option.value === item.value,
+        );
+        if (
+          el.multiple ||
+          options.length !== 1 ||
+          options[0].disabled ||
+          (options[0].parentElement instanceof HTMLOptGroupElement &&
+            options[0].parentElement.disabled)
+        )
+          return null;
+      }
+      for (
+        let ancestor: Element | null = el;
+        ancestor;
+        ancestor = ancestor.parentElement
+      ) {
+        const ancestorStyle = getComputedStyle(ancestor);
+        if (
+          ancestorStyle.display === "none" ||
+          ancestorStyle.visibility !== "visible" ||
+          Number(ancestorStyle.opacity) === 0 ||
+          ancestorStyle.contentVisibility === "hidden"
+        )
+          return null;
+      }
+      const rect = el.getBoundingClientRect(),
+        style = getComputedStyle(el);
+      if (
+        rect.width <= 0 ||
+        rect.height <= 0 ||
+        rect.top < 0 ||
+        rect.left < 0 ||
+        rect.bottom > innerHeight ||
+        rect.right > innerWidth ||
+        style.visibility !== "visible" ||
+        style.display === "none" ||
+        Number(style.opacity) === 0
+      )
+        return null;
+      const top = document.elementFromPoint(
+        rect.x + rect.width / 2,
+        rect.y + rect.height / 2,
       );
-      if (
-        el.multiple ||
-        options.length !== 1 ||
-        options[0].disabled ||
-        (options[0].parentElement instanceof HTMLOptGroupElement &&
-          options[0].parentElement.disabled)
-      )
-        return false;
+      if (top !== el) return null;
+      const setter = Object.getOwnPropertyDescriptor(
+        el instanceof HTMLTextAreaElement
+          ? HTMLTextAreaElement.prototype
+          : el instanceof HTMLSelectElement
+            ? HTMLSelectElement.prototype
+            : HTMLInputElement.prototype,
+        "value",
+      )?.set;
+      if (!setter) return null;
+      return { el, setter, item };
+    };
+    const prepared = [];
+    for (const item of list) {
+      const entry = validateAndPrepare(item);
+      if (!entry) return false;
+      prepared.push(entry);
     }
-    for (
-      let ancestor: Element | null = el;
-      ancestor;
-      ancestor = ancestor.parentElement
-    ) {
-      const ancestorStyle = getComputedStyle(ancestor);
-      if (
-        ancestorStyle.display === "none" ||
-        ancestorStyle.visibility !== "visible" ||
-        Number(ancestorStyle.opacity) === 0 ||
-        ancestorStyle.contentVisibility === "hidden"
-      )
-        return false;
+    for (const { el, setter, item } of prepared) {
+      setter.call(el, item.value);
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new Event("change", { bubbles: true }));
     }
-    const rect = el.getBoundingClientRect(),
-      style = getComputedStyle(el);
-    if (
-      rect.width <= 0 ||
-      rect.height <= 0 ||
-      rect.top < 0 ||
-      rect.left < 0 ||
-      rect.bottom > innerHeight ||
-      rect.right > innerWidth ||
-      style.visibility !== "visible" ||
-      style.display === "none" ||
-      Number(style.opacity) === 0
-    )
-      return false;
-    const top = document.elementFromPoint(
-      rect.x + rect.width / 2,
-      rect.y + rect.height / 2,
-    );
-    if (top !== el) return false;
-    const setter = Object.getOwnPropertyDescriptor(
-      el instanceof HTMLTextAreaElement
-        ? HTMLTextAreaElement.prototype
-        : el instanceof HTMLSelectElement
-          ? HTMLSelectElement.prototype
-          : HTMLInputElement.prototype,
-      "value",
-    )?.set;
-    if (!setter) return false;
-    setter.call(el, insertion.value);
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-    el.dispatchEvent(new Event("change", { bubbles: true }));
     if (state.observer.takeRecords().length) state.generation++;
-    return (
-      el.isConnected &&
-      state.elements.get(insertion.key) === el &&
-      el.value === insertion.value &&
-      location.origin === origin
+    return prepared.every(
+      ({ el, item }) =>
+        el.isConnected &&
+        state.elements.get(item.key) === el &&
+        el.value === item.value &&
+        location.origin === origin,
     );
   }
   const masks: Rect[] = [];
@@ -793,19 +807,36 @@ export class ChromeBrowser implements BrowserPort {
     fieldKey: string,
     value: string,
   ): Promise<boolean> {
+    return this.insertBatch(identity, [{ fieldKey, value }]);
+  }
+  async insertBatch(
+    identity: Identity,
+    insertions: { fieldKey: string; value: string }[],
+  ): Promise<boolean> {
     try {
-      if (
-        !fieldKey ||
-        fieldKey.length > 100 ||
-        typeof value !== "string" ||
-        value.length > 10000
-      )
+      if (!insertions.length || insertions.length > 100)
         throw new SafeError("INVALID_INPUT");
+      for (const { fieldKey, value } of insertions) {
+        if (
+          !fieldKey ||
+          fieldKey.length > 100 ||
+          typeof value !== "string" ||
+          value.length > 10000
+        )
+          throw new SafeError("INVALID_INPUT");
+      }
       if (!sameIdentity(identity, await this.current(identity.tabId)))
         throw new SafeError("STALE_CAPTURE");
       const revision = this.revisions.get(identity.tabId);
       if (revision?.generation !== identity.generation)
         throw new SafeError("STALE_CAPTURE");
+      const payload =
+        insertions.length === 1
+          ? { key: insertions[0].fieldKey, value: insertions[0].value }
+          : insertions.map((item) => ({
+              key: item.fieldKey,
+              value: item.value,
+            }));
       const result = await this.api.scripting.executeScript({
         target: { tabId: identity.tabId, documentIds: [identity.documentId] },
         world: "ISOLATED",
@@ -818,7 +849,7 @@ export class ChromeBrowser implements BrowserPort {
             urlKey: identity.urlKey,
             viewport: identity.viewport,
           },
-          { key: fieldKey, value },
+          payload,
         ],
       });
       if (
@@ -835,8 +866,10 @@ export class ChromeBrowser implements BrowserPort {
         after.urlKey === identity.urlKey &&
         after.windowId === identity.windowId &&
         after.zoom === identity.zoom &&
-        observed.snapshot.fields.some(
-          (f) => f.key === fieldKey && f.value === value,
+        insertions.every(({ fieldKey, value }) =>
+          observed.snapshot.fields.some(
+            (f) => f.key === fieldKey && f.value === value,
+          ),
         )
       );
     } catch (e) {

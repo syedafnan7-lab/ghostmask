@@ -250,10 +250,16 @@ export class Session {
   }
   async approveBatch(entries: { target: string; value: string }[]) {
     this.#check();
+    if (this.#busy) throw new SafeError("POLICY_DENIED");
     if (!this.#observation) throw new SafeError("INVALID_ARTIFACT");
     if (this.#purpose !== "fill-approved-fields" || entries.length === 0)
       throw new SafeError("POLICY_DENIED");
-    for (const { target } of entries) {
+    const seen = new Set<string>();
+    for (const { target, value } of entries) {
+      if (seen.has(target)) throw new SafeError("INVALID_INPUT");
+      seen.add(target);
+      if (typeof value !== "string" || !value || value.length > 4096)
+        throw new SafeError("TOKEN_DENIED");
       const f = this.#field(target);
       if (
         !this.allowed.includes(f.category) ||
@@ -270,12 +276,15 @@ export class Session {
       });
       this.#check();
     }
+    const nextGrants = [...this.#grants];
     for (const { target, value } of entries) {
       const f = this.#field(target);
       const token = this.#tokens.issue(value, this.#scope(f.key));
-      this.#grants = this.#grants.filter((g) => g.target !== target);
-      this.#grants.push({ target, token });
+      const idx = nextGrants.findIndex((g) => g.target === target);
+      if (idx >= 0) nextGrants.splice(idx, 1);
+      nextGrants.push({ target, token });
     }
+    this.#grants = nextGrants;
     this.#refresh();
     this.#record("approved");
   }
@@ -367,7 +376,12 @@ export class Session {
       this.#check(epoch);
       const plan: { target: string; token: string }[] =
         p.type === "batch_insert" ? p.insertions : [p];
+      if (!plan.length) throw new SafeError("POLICY_DENIED");
+      const seenTargets = new Set<string>();
+      const resolved: { fieldKey: string; value: string }[] = [];
       for (const item of plan) {
+        if (seenTargets.has(item.target)) throw new SafeError("POLICY_DENIED");
+        seenTargets.add(item.target);
         const f = this.#field(item.target);
         if (
           !this.allowed.includes(f.category) ||
@@ -378,11 +392,26 @@ export class Session {
           throw new SafeError("POLICY_DENIED");
         const value = this.#tokens.consume(item.token, this.#scope(f.key));
         this.#grants = this.#grants.filter((g) => g.token !== item.token);
+        resolved.push({ fieldKey: f.key, value });
+      }
+      if (resolved.length > 1 && this.browser.insertBatch) {
         this.#record("attempted");
-        const success = await this.browser.insert(o.identity, f.key, value);
+        const success = await this.browser.insertBatch(o.identity, resolved);
         this.#check(epoch);
         if (!success) throw new SafeError("INSERT_FAILED");
         this.#record("verified");
+      } else {
+        for (const item of resolved) {
+          this.#record("attempted");
+          const success = await this.browser.insert(
+            o.identity,
+            item.fieldKey,
+            item.value,
+          );
+          this.#check(epoch);
+          if (!success) throw new SafeError("INSERT_FAILED");
+          this.#record("verified");
+        }
       }
       this.#invalidate();
     });

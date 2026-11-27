@@ -52,6 +52,10 @@ export interface BrowserPort {
   capture(tabId: number, exclusions: string[]): Promise<Observation>;
   current(tabId: number): Promise<Identity>;
   insert(identity: Identity, fieldKey: string, value: string): Promise<boolean>;
+  insertBatch?(
+    identity: Identity,
+    insertions: { fieldKey: string; value: string }[],
+  ): Promise<boolean>;
 }
 export type SafeErrorCode =
   | "CAPTURE_FAILED"
