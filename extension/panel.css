@@ -524,6 +524,27 @@ kbd {
   transition: opacity var(--duration-ui) var(--ease-out), transform var(--duration-ui) var(--ease-out);
 }
 
+.access-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 9px 11px;
+  margin-top: 8px;
+  background: var(--local-bg);
+  border: 1px solid var(--local-border);
+  border-radius: var(--radius-sm);
+  color: var(--local-ink);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.access-prompt button {
+  align-self: flex-start;
+  min-height: 30px;
+  padding: 5px 10px;
+  font-size: 11px;
+}
+
 @starting-style {
   .dirty-pill:not([hidden]) {
     opacity: 0;

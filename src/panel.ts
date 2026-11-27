@@ -161,6 +161,7 @@ async function refreshTabs() {
   }
   if (tab.options.length === 0)
     tab.append(option("", "Open a supported page, then click GhostMask"));
+  element("access-prompt").hidden = tab.options.length > 0 && Boolean(tab.value);
   render();
 }
 
@@ -739,6 +740,17 @@ button("refresh-tabs").addEventListener("click", () => {
   void act(refreshTabs, "Tab list refreshed.");
 });
 
+button("grant-access").addEventListener("click", () => {
+  void act(async () => {
+    if (!chrome.permissions?.request) throw new SafeError("UNSUPPORTED");
+    const granted = await chrome.permissions.request({
+      origins: ["http://*/*", "https://*/*"],
+    });
+    if (!granted) throw new SafeError("POLICY_DENIED");
+    await refreshTabs();
+  }, "Site access granted. Select your webpage above and click Start fresh task.");
+});
+
 for (const control of [tab, profile, purpose, route, ocr]) {
   control.addEventListener("change", () => render());
 }
@@ -1063,6 +1075,15 @@ window.addEventListener("pagehide", () => {
   browser?.dispose();
   localValue.value = "";
   privateTerms.value = "";
+});
+
+const syncTabs = () => {
+  if (!busy) void refreshTabs().catch(() => {});
+};
+chrome.tabs?.onActivated?.addListener(syncTabs);
+chrome.tabs?.onRemoved?.addListener(syncTabs);
+chrome.tabs?.onUpdated?.addListener((_id, info) => {
+  if (info.url || info.status === "complete") syncTabs();
 });
 
 void refreshTabs().catch(() => {
